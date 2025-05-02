@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Genomic Risk Predictor Simulation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/lucide-static@latest/dist/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* Use Inter font */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Simple fade-in animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .fade-in-up {
+            animation: fadeInUp 0.5s ease-out forwards;
+        }
+        /* Styling for the results list */
+        #resultsList li {
+            transition: background-color 0.3s ease;
+        }
+        #resultsList li:hover {
+            background-color: rgba(255, 255, 255, 0.05); /* Subtle hover effect */
+        }
+        /* Loading spinner */
+        .loader {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto; /* Center the spinner */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Modal Styles */
+        .modal {
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
+        .modal.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .modal.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal.visible .modal-content {
+            transform: scale(1);
+        }
+        .modal.hidden .modal-content {
+            transform: scale(0.95);
+        }
+        /* Ensure icons are vertically aligned */
+        .icon {
+            display: inline-block;
+            vertical-align: middle; /* Align icon with text */
+            width: 1.1em; /* Adjust size as needed */
+            height: 1.1em; /* Adjust size as needed */
+            margin-right: 0.3em; /* Space between icon and text */
+        }
+         /* Align icons inside buttons/links slightly better */
+        button .icon, a .icon, label .icon, span .icon {
+             vertical-align: text-bottom; /* Adjust alignment for button text */
+             margin-right: 0.4em;
+        }
+        button .icon.-ml-1 { /* Specific adjustment if needed */
+            margin-left: -0.25rem;
+        }
+         .info-button {
+             cursor: pointer;
+             display: inline-flex;
+             align-items: center;
+             color: #9ca3af; /* gray-400 */
+             transition: color 0.2s ease;
+             vertical-align: middle; /* Align button itself */
+        }
+        .info-button:hover {
+             color: #60a5fa; /* blue-400 */
+        }
+        .info-button svg, .info-button i { /* Target both SVG and Lucide <i> tags */
+             width: 1em;
+             height: 1em;
+             margin-left: 0.2em;
+             margin-right: 0; /* Remove default right margin for icon inside this button */
+        }
+        /* Styling for disclaimer */
+        .disclaimer {
+            background-color: rgba(255, 165, 0, 0.1); /* Light orange background */
+            border-left: 4px solid #ffa500; /* Orange border */
+            padding: 10px 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #fcd34d; /* Amber-300 for better contrast on dark */
+            display: flex; /* Align icon and text */
+            align-items: flex-start; /* Align icon to top */
+        }
+        .disclaimer .icon {
+             margin-right: 0.5em; /* Space after icon */
+             flex-shrink: 0; /* Prevent icon from shrinking */
+             margin-top: 0.1em; /* Slight top adjustment */
+             width: 1.3em;
+             height: 1.3em;
+        }
+         /* Overall Score Styling */
+        #overallScoreContainer {
+             background-color: rgba(0, 0, 0, 0.2);
+             padding: 15px;
+             border-radius: 8px;
+             margin-bottom: 20px;
+             text-align: center;
+        }
+        #overallScoreValue {
+            font-size: 1.8em; /* Slightly larger score */
+            font-weight: bold;
+        }
+        /* Style file input button */
+        .file-input-button {
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background-color: #4a5568; /* gray-700 */
+            color: white;
+            border-radius: 0.375rem; /* rounded-md */
+            transition: background-color 0.2s ease;
+            font-size: 0.875rem; /* text-sm */
+            margin-left: 0.5rem; /* ml-2 */
+        }
+        .file-input-button:hover {
+            background-color: #2d3748; /* gray-800 */
+        }
+        .file-input-button i {
+            margin-right: 0.3em;
+        }
+        /* Hide actual file input */
+        input[type="file"] {
+            display: none;
+        }
+        /* Result item details */
+        .result-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out, margin-top 0.5s ease-out, padding-top 0.5s ease-out; /* Added padding transition */
+            margin-top: 0;
+            border-top: 1px solid rgba(107, 114, 128, 0.3); /* gray-500 opacity 30 */
+            padding-top: 0;
+        }
+        .result-details.visible {
+            max-height: 500px; /* Adjust as needed */
+            margin-top: 1rem; /* mt-4 */
+            padding-top: 1rem; /* pt-4 */
+        }
+        .result-details img {
+            max-width: 100px;
+            max-height: 100px;
+            border-radius: 0.375rem; /* rounded-md */
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border for image */
+        }
+         /* Styling for detail section headers */
+        .detail-header {
+            display: flex;
+            align-items: center;
+            font-semibold;
+            text-gray-200;
+            margin-bottom: 0.25rem; /* mb-1 */
+        }
+        .detail-header .icon {
+            width: 1em;
+            height: 1em;
+            margin-right: 0.4em;
+            color: #9ca3af; /* gray-400 */
+        }
+        /* Consistent Styling */
+        h1, h2, h3, h4 {
+            color: #ffffff;
+        }
+        button, .file-input-button {
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        button:hover, .file-input-button:hover {
+            transform: scale(1.05);
+        }
+        /* Print Styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #resultsArea, #resultsArea * {
+                visibility: visible;
+            }
+            #resultsArea {
+                position: absolute;
+                left: 0;
+                top: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 to-blue-900 min-h-screen flex items-center justify-center p-4 text-white">
+
+    <div class="bg-gray-800 bg-opacity-70 backdrop-blur-md rounded-xl shadow-2xl p-6 md:p-10 w-full max-w-4xl">
+
+        <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+            <i data-lucide="dna" class="icon inline-block align-middle h-8 w-8 -mt-1"></i> Enhanced Genomic Risk Predictor
+        </h1>
+        <p class="text-center text-gray-300 mb-8 text-sm md:text-base">
+            Paste your simulated genomic report below, or upload a text file, to analyze potential risks, view suggestions, and learn more.
+            <br><strong>Note:</strong> This is a simplified simulation using mock data for demonstration purposes only. It does not use real AI/ML.
+        </p>
+
+        <div class="mb-6">
+            <label for="genomicReport" class="block text-lg font-medium text-gray-200 mb-2"><i data-lucide="file-text" class="icon"></i>Simulated Genomic Report:</label>
+            <div class="flex items-center mb-2">
+                <span class="text-gray-400 text-sm">Paste text below or</span>
+                <label for="reportFile" class="file-input-button" aria-label="Upload genomic report file">
+                    <i data-lucide="upload" class="icon"></i> Upload File
+                </label>
+                <input type="file" id="reportFile" accept=".txt" aria-label="Upload genomic report file">
+                <span id="fileName" class="text-sm text-gray-400 ml-3 truncate max-w-[150px] md:max-w-xs"></span>
+            </div>
+            <textarea id="genomicReport" rows="8" class="w-full p-4 bg-gray-700 bg-opacity-50 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300 ease-in-out placeholder-gray-400" placeholder="Paste report text here... e.g., '...contains variant RS12345 associated with Type 2 Diabetes...' or '...marker GENE_X detected...'"></textarea>
+        </div>
+
+        <div class="text-center mb-8">
+            <button id="analyzeButton" aria-label="Analyze Risk" class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-300 ease-in-out text-lg">
+                <i data-lucide="search" class="icon -ml-1"></i> Analyze Risk
+            </button>
+        </div>
+
+        <div id="loadingIndicator" class="hidden text-center">
+             <div class="loader"></div>
+             <p class="text-gray-400">Analyzing report...</p>
+        </div>
+
+        <div id="resultsArea" class="mt-6 hidden">
+             <h2 class="text-2xl font-semibold mb-4 text-center text-blue-300"><i data-lucide="bar-chart-2" class="icon"></i>Analysis Results</h2>
+
+             <div id="overallScoreContainer" class="fade-in">
+                 <p class="text-gray-300 mb-1"><i data-lucide="gauge" class="icon"></i>Simulated Overall Risk Score:</p>
+                 <span id="overallScoreValue" class="text-white">--</span>
+                 <p id="overallScoreCategory" class="text-sm text-gray-400 mt-1">--</p>
+             </div>
+
+             <div id="disclaimerArea" class="disclaimer fade-in mb-4">
+                 <i data-lucide="alert-triangle" class="icon text-amber-400"></i> <div> <strong class="font-semibold">Important Disclaimer:</strong> The information, suggestions, images, and scores provided are for simulation purposes ONLY and are NOT medical advice. Always consult with a qualified healthcare professional for any health concerns or before making any decisions related to your health or treatment. This tool uses predefined mock data and does not involve real AI/ML analysis.
+                 </div>
+             </div>
+
+             <div id="resultsMessage" class="text-center text-gray-300 mb-4 p-3 bg-gray-700 bg-opacity-40 rounded-lg fade-in">
+                 <button id="showDetailsButton" class="text-blue-400 hover:text-blue-300">Show Details</button>
+             </div>
+
+             <ul id="resultsList" class="space-y-4"></ul>
+
+             <div id="chartContainer" class="mt-6 hidden">
+                 <canvas id="riskChart" width="400" height="200"></canvas>
+             </div>
+
+             <div class="text-center mt-8">
+                 <button id="downloadButton" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-5 rounded-lg shadow-sm hover:shadow-md transition duration-300 ease-in-out text-sm hidden">
+                     <i data-lucide="download" class="icon -ml-1"></i> Download Results
+                 </button>
+                 <button id="printButton" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-5 rounded-lg shadow-sm hover:shadow-md transition duration-300 ease-in-out text-sm">
+                     <i data-lucide="printer" class="icon -ml-1"></i> Print Results
+                 </button>
+             </div>
+        </div>
+
+         <div id="errorArea" class="mt-4 text-center text-red-400 font-medium hidden p-3 bg-red-900 bg-opacity-30 rounded-lg">
+             <i data-lucide="x-circle" class="icon"></i> <span id="errorMessage"></span>
+         </div>
+
+    </div>
+
+    <div id="markerModal" class="modal hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50">
+        <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg transform scale-95">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-700">
+                <h3 id="modalTitle" class="text-xl font-semibold text-blue-300 flex items-center"><i data-lucide="info" class="icon mr-2"></i>Marker Information</h3>
+                <button id="closeModalButton" class="text-gray-400 hover:text-white transition text-2xl leading-none">&times;</button>
+            </div>
+            <div id="modalBody" class="text-gray-300 text-sm space-y-3 max-h-[60vh] overflow-y-auto pr-2"></div>
+        </div>
+    </div>
+
+    <div id="feedbackModal" class="modal hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50">
+        <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg transform scale-95">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-700">
+                <h3 class="text-xl font-semibold text-blue-300 flex items-center"><i data-lucide="info" class="icon mr-2"></i>Feedback</h3>
+                <button id="closeFeedbackButton" class="text-gray-400 hover:text-white transition text-2xl leading-none">&times;</button>
+            </div>
+            <div id="feedbackBody" class="text-gray-300 text-sm space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+                <textarea id="feedbackText" rows="6" class="w-full p-4 bg-gray-700 bg-opacity-50 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-300 ease-in-out placeholder-gray-400" placeholder="Your feedback..."></textarea>
+                <button id="submitFeedbackButton" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-300 ease-in-out">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <select id="languageSelector" class="bg-gray-700 text-white py-2 px-4 rounded-lg">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="fr">Français</option>
+    </select>
+
+    <script>
+        // --- Configuration ---
+        // Enhanced mock genetic markers data (no changes needed here for icons)
+        const diseaseMarkers = {
+            "RS12345": { disease: "Type 2 Diabetes", risk: "Medium", confidence: "High", description: "Common variant associated with increased susceptibility.", suggestion: "Consider discussing diet, exercise, and regular check-ups with a healthcare provider.", details: "RS12345 is located in the TCF7L2 gene, a well-established risk factor for Type 2 Diabetes. Its presence suggests a predisposition, but lifestyle factors play a significant role. (Simulated Data)", imageUrl: "https://placehold.co/100x100/7ca2e8/ffffff?text=Diabetes", prevention: "Maintain a healthy weight, follow a balanced diet low in processed sugars and saturated fats, engage in regular physical activity (150+ minutes/week), manage stress, and avoid smoking. Regular blood sugar screenings are recommended. (Simulated Info)", treatment: "Lifestyle modifications (diet, exercise) are primary. Medications like Metformin may be prescribed. Insulin therapy might be needed in advanced stages. Regular monitoring by a healthcare professional is crucial. (Simulated Info)" },
+            "BRCA1_MUT": { disease: "Breast/Ovarian Cancer", risk: "High", confidence: "High", description: "Mutation significantly increases risk.", suggestion: "Genetic counseling and enhanced screening protocols are often recommended. Discuss options with a specialist.", details: "Mutations in the BRCA1 gene impair DNA repair, leading to a significantly elevated lifetime risk for breast, ovarian, and other cancers. (Simulated Data)", imageUrl: "https://placehold.co/100x100/e87ca2/ffffff?text=BRCA1", prevention: "Enhanced surveillance (mammograms, MRIs, pelvic exams), risk-reducing medications (e.g., tamoxifen), or prophylactic surgery (mastectomy, oophorectomy) may be considered after thorough discussion with specialists. Lifestyle factors like maintaining a healthy weight and limiting alcohol may have some benefit. (Simulated Info)", treatment: "Treatment depends on cancer type, stage, and characteristics. Options include surgery, chemotherapy, radiation therapy, targeted therapies (e.g., PARP inhibitors), and hormone therapy. (Simulated Info)" },
+            "APOE_E4": { disease: "Alzheimer's Disease", risk: "High", confidence: "Moderate", description: "Allele associated with higher late-onset risk.", suggestion: "Maintaining cardiovascular health and engaging in mentally stimulating activities may be beneficial. Consult a doctor for personalized advice.", details: "The APOE ε4 allele is the strongest genetic risk factor for late-onset Alzheimer's disease. However, not everyone with ε4 develops the disease. (Simulated Data)", imageUrl: "https://placehold.co/100x100/a27ce8/ffffff?text=APOE4", prevention: "While no definitive prevention exists, managing cardiovascular risk factors (high blood pressure, cholesterol, diabetes), regular exercise, a brain-healthy diet (e.g., Mediterranean), cognitive engagement, social interaction, and adequate sleep are recommended. (Simulated Info)", treatment: "Current treatments focus on managing symptoms and include cholinesterase inhibitors and memantine. Lifestyle interventions and support for caregivers are also important components of care. Research into disease-modifying therapies is ongoing. (Simulated Info)" },
+            "HLA_DQ2": { disease: "Celiac Disease", risk: "Medium", confidence: "High", description: "Presence increases risk, especially with HLA-DQ8.", suggestion: "If experiencing symptoms, consult a gastroenterologist for diagnostic testing. Avoid gluten only if diagnosed.", details: "HLA-DQ2 and HLA-DQ8 are genes strongly associated with Celiac Disease. Their presence is necessary but not sufficient for disease development. (Simulated Data)", imageUrl: "https://placehold.co/100x100/e8a27c/ffffff?text=Celiac", prevention: "Currently, the only prevention for Celiac Disease symptoms in susceptible individuals is lifelong adherence to a strict gluten-free diet *after diagnosis*. There's no known way to prevent the initial development of the condition. (Simulated Info)", treatment: "Strict, lifelong gluten-free diet is the only effective treatment. This involves avoiding wheat, barley, rye, and contaminated oats. Nutritional deficiencies should be monitored and addressed. (Simulated Info)" },
+            "GENE_X": { disease: "Cardiovascular Disease", risk: "Low", confidence: "Low", description: "Slightly elevated risk marker detected.", suggestion: "General heart-healthy lifestyle choices (diet, exercise, not smoking) are always advisable. Discuss overall risk with your doctor.", details: "GENE_X represents a hypothetical marker with a small, statistically observed association with cardiovascular events in some populations. Its clinical significance is still under investigation. (Simulated Data)", imageUrl: "https://placehold.co/100x100/e87c7c/ffffff?text=CVD", prevention: "Maintain healthy blood pressure, cholesterol, and blood sugar levels. Eat a heart-healthy diet (fruits, vegetables, whole grains, lean protein, low saturated/trans fats), exercise regularly, don't smoke, manage stress, and limit alcohol. (Simulated Info)", treatment: "Depends on the specific condition (e.g., hypertension, high cholesterol, coronary artery disease). May include lifestyle changes, medications (statins, blood pressure meds, etc.), and procedures (angioplasty, bypass surgery). (Simulated Info)" },
+            "MARKER_Z": { disease: "Hypothyroidism", risk: "Low", confidence: "Moderate", description: "Variant with minor association found.", suggestion: "Be aware of potential symptoms (fatigue, weight gain) and discuss thyroid function tests with your doctor if concerned.", details: "MARKER_Z is a simulated variant linked to minor alterations in thyroid hormone regulation pathways in some studies. (Simulated Data)", imageUrl: "https://placehold.co/100x100/7ce8e8/ffffff?text=Thyroid", prevention: "Generally not preventable, especially autoimmune forms (Hashimoto's). Ensuring adequate iodine intake is important, but excessive intake can also be problematic. Avoid unnecessary radiation exposure to the neck. (Simulated Info)", treatment: "Standard treatment is thyroid hormone replacement therapy, typically with levothyroxine, taken daily. Dosage is adjusted based on regular blood tests (TSH). (Simulated Info)" },
+            "VAR_1101": { disease: "Macular Degeneration", risk: "Medium", confidence: "High", description: "Variant linked to age-related macular degeneration.", suggestion: "Regular eye exams are important, especially with age. Discuss protective measures (e.g., UV protection, diet) with an ophthalmologist.", details: "VAR_1101 is a simulated variant in a gene (like CFH or ARMS2) known to influence the risk of developing Age-related Macular Degeneration (AMD). (Simulated Data)", imageUrl: "https://placehold.co/100x100/e8e87c/ffffff?text=AMD", prevention: "Don't smoke. Protect eyes from UV light (sunglasses). Eat a diet rich in leafy green vegetables, fish (omega-3s), and consider AREDS/AREDS2 supplements if recommended by an eye doctor based on AMD stage. Maintain healthy blood pressure and cholesterol. (Simulated Info)", treatment: "For 'dry' AMD, AREDS vitamins may slow progression. For 'wet' AMD, treatments include anti-VEGF injections into the eye to reduce abnormal blood vessel growth and leakage. Low vision aids can help manage vision loss. (Simulated Info)" }
+        };
+
+        // --- DOM Elements ---
+        const reportInput = document.getElementById('genomicReport');
+        const analyzeButton = document.getElementById('analyzeButton');
+        const resultsArea = document.getElementById('resultsArea');
+        const resultsMessage = document.getElementById('resultsMessage');
+        const resultsList = document.getElementById('resultsList');
+        const errorArea = document.getElementById('errorArea');
+        const errorMessageSpan = document.getElementById('errorMessage'); // Span for error text
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const overallScoreContainer = document.getElementById('overallScoreContainer');
+        const overallScoreValue = document.getElementById('overallScoreValue');
+        const overallScoreCategory = document.getElementById('overallScoreCategory');
+        const disclaimerArea = document.getElementById('disclaimerArea');
+        const downloadButton = document.getElementById('downloadButton');
+        const printButton = document.getElementById('printButton');
+        const reportFileInput = document.getElementById('reportFile');
+        const fileNameDisplay = document.getElementById('fileName');
+        const markerModal = document.getElementById('markerModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalBody = document.getElementById('modalBody');
+        const closeModalButton = document.getElementById('closeModalButton');
+        const feedbackModal = document.getElementById('feedbackModal');
+        const feedbackBody = document.getElementById('feedbackBody');
+        const closeFeedbackButton = document.getElementById('closeFeedbackButton');
+        const submitFeedbackButton = document.getElementById('submitFeedbackButton');
+        const feedbackText = document.getElementById('feedbackText');
+        const languageSelector = document.getElementById('languageSelector');
+
+        // --- Risk Score Configuration ---
+        const riskPoints = { "Low": 1, "Medium": 3, "High": 5 };
+        const scoreCategories = {
+             0: { label: "Very Low", color: "text-green-400", chartColor: 'rgba(74, 222, 128, 0.7)' },
+             5: { label: "Low", color: "text-green-300", chartColor: 'rgba(134, 239, 172, 0.7)' },
+             10: { label: "Moderate", color: "text-yellow-400", chartColor: 'rgba(250, 204, 21, 0.7)' },
+             15: { label: "High", color: "text-orange-400", chartColor: 'rgba(251, 146, 60, 0.7)' },
+             20: { label: "Very High", color: "text-red-500", chartColor: 'rgba(239, 68, 68, 0.7)' }
+        };
+
+        // --- Global State ---
+        let currentFindings = [];
+
+        // --- Event Listeners ---
+        analyzeButton.addEventListener('click', handleAnalysis);
+        closeModalButton.addEventListener('click', closeModal);
+        downloadButton.addEventListener('click', downloadResults);
+        printButton.addEventListener('click', () => window.print());
+        reportFileInput.addEventListener('change', handleFileUpload);
+        markerModal.addEventListener('click', (event) => {
+            if (event.target === markerModal) closeModal();
+        });
+        document.addEventListener('keydown', (event) => {
+             if (event.key === 'Escape' && markerModal.classList.contains('visible')) closeModal();
+        });
+        closeFeedbackButton.addEventListener('click', closeFeedbackModal);
+        submitFeedbackButton.addEventListener('click', handleFeedbackSubmit);
+        languageSelector.addEventListener('change', handleLanguageChange);
+        document.getElementById('showDetailsButton').addEventListener('click', toggleDetails);
+
+        // --- Core Functions ---
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                fileNameDisplay.textContent = file.name;
+                if (file.type === "text/plain") {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        reportInput.value = e.target.result;
+                        clearError(); // Clear any previous errors
+                    };
+                    reader.onerror = (e) => {
+                        showError("Error reading file.");
+                        fileNameDisplay.textContent = '';
+                    };
+                    reader.readAsText(file);
+                } else {
+                    showError("Please upload a plain text (.txt) file.");
+                    fileNameDisplay.textContent = '';
+                    reportFileInput.value = '';
+                }
+            } else {
+                 fileNameDisplay.textContent = '';
+            }
+        }
+
+        function handleAnalysis() {
+            const reportText = reportInput.value;
+            resetUI(); // Reset UI elements before analysis
+
+            if (!reportText.trim()) {
+                showError("Please paste or upload the simulated genomic report text.");
+                return;
+            }
+
+            clearError(); // Clear previous errors
+            loadingIndicator.classList.remove('hidden');
+            analyzeButton.disabled = true;
+            analyzeButton.classList.add('opacity-50', 'cursor-not-allowed'); // Visual feedback for disabled state
+
+            setTimeout(() => {
+                try {
+                    currentFindings = analyzeReport(reportText);
+                    displayResults(currentFindings);
+                    if (currentFindings.length > 0 || reportText.trim()) {
+                        downloadButton.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    console.error("Analysis Error:", error);
+                    showError("An unexpected error occurred during analysis.");
+                    downloadButton.classList.add('hidden');
+                } finally {
+                     loadingIndicator.classList.add('hidden');
+                     resultsArea.classList.remove('hidden');
+                     resultsArea.classList.add('fade-in');
+                     analyzeButton.disabled = false;
+                     analyzeButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                     // Re-initialize Lucide icons after dynamic content is added
+                     if (window.lucide) {
+                         lucide.createIcons();
+                     }
+                }
+            }, 1500);
+        }
+
+        function resetUI() {
+            // Don't hide resultsArea immediately, only clear content
+            // resultsArea.classList.add('hidden');
+            resultsList.innerHTML = '';
+            resultsMessage.textContent = '';
+            overallScoreValue.textContent = '--';
+            overallScoreCategory.textContent = '--';
+            overallScoreValue.className = 'text-white font-bold text-2xl'; // Reset score style
+            downloadButton.classList.add('hidden');
+            currentFindings = [];
+            // Do not hide disclaimer
+        }
+
+        function analyzeReport(text) {
+            let findings = [];
+            const lowerCaseText = text.toLowerCase();
+            for (const marker in diseaseMarkers) {
+                const regex = new RegExp(`\\b${marker.toLowerCase().replace(/_/g, '[_\\s-]?')}\\b`, 'i');
+                if (regex.test(lowerCaseText)) {
+                    findings.push({ marker: marker, ...diseaseMarkers[marker] });
+                }
+            }
+            findings.sort((a, b) => (riskPoints[b.risk] || 0) - (riskPoints[a.risk] || 0));
+            return findings;
+        }
+
+        function calculateOverallScore(findings) {
+            let score = 0;
+            findings.forEach(finding => { score += riskPoints[finding.risk] || 0; });
+            let categoryInfo = scoreCategories[0];
+            const sortedThresholds = Object.keys(scoreCategories).map(Number).sort((a, b) => a - b);
+            for (const threshold of sortedThresholds) {
+                 if (score >= threshold) categoryInfo = scoreCategories[threshold];
+                 else break;
+            }
+            return { score, category: categoryInfo.label, color: categoryInfo.color, chartColor: categoryInfo.chartColor };
+        }
+
+        function displayResults(findings) {
+            const scoreInfo = calculateOverallScore(findings);
+            overallScoreValue.textContent = scoreInfo.score;
+            overallScoreCategory.textContent = scoreInfo.category;
+            overallScoreValue.className = `font-bold text-2xl ${scoreInfo.color}`;
+            overallScoreContainer.classList.add('fade-in'); // Keep fade-in for score
+
+            // Ensure resultsArea is visible before adding content
+             resultsArea.classList.remove('hidden');
+
+            if (findings.length === 0) {
+                resultsMessage.innerHTML = `<i data-lucide="check-circle" class="icon text-green-400"></i> No significant risk markers identified based on the provided text and simulation data.`;
+                resultsList.innerHTML = '';
+                chartContainer.classList.add('hidden');
+            } else {
+                resultsMessage.innerHTML = `<i data-lucide="list" class="icon"></i> Found ${findings.length} potential risk indicator(s). See details below.`;
+                resultsList.innerHTML = ''; // Clear previous list items before adding new ones
+                findings.forEach(finding => {
+                    const listItem = createResultItem(finding);
+                    resultsList.appendChild(listItem);
+                });
+
+                // Display chart
+                chartContainer.classList.remove('hidden');
+                displayChart(findings);
+            }
+
+             // Ensure Lucide icons are rendered for messages too
+             if (window.lucide) {
+                 lucide.createIcons({ nodes: [resultsMessage] });
+             }
+        }
+
+        function createResultItem(finding) {
+            const listItem = document.createElement('li');
+            listItem.className = 'p-4 bg-gray-700 bg-opacity-60 rounded-lg shadow-sm border border-gray-600 fade-in'; // Add fade-in here
+
+            let riskColorClass = 'text-green-400';
+            let riskIconName = 'check-circle';
+            if (finding.risk === 'Medium') { riskColorClass = 'text-yellow-400'; riskIconName = 'alert-triangle'; }
+            else if (finding.risk === 'High') { riskColorClass = 'text-red-400'; riskIconName = 'alert-octagon'; }
+
+            let confidenceColorClass = 'text-gray-400';
+            let confidenceIconName = 'bar-chart'; // Low confidence icon
+            if (finding.confidence === 'Moderate') { confidenceColorClass = 'text-blue-300'; confidenceIconName = 'bar-chart-2'; }
+            if (finding.confidence === 'High') { confidenceColorClass = 'text-green-300'; confidenceIconName = 'bar-chart-3'; }
+
+            listItem.innerHTML = `
+                <div class="flex justify-between items-start gap-4 flex-wrap"> <div class="flex-1 min-w-[200px]"> <h3 class="text-lg font-semibold text-blue-300 mb-1 flex items-center"><i data-lucide="microscope" class="icon mr-2"></i>${finding.disease}</h3>
+                        <p class="text-sm text-gray-300 mb-2">${finding.description}</p>
+                        <p class="text-xs text-gray-400 mt-2">
+                            <i data-lucide="tag" class="icon w-3 h-3"></i> Detected Marker: ${finding.marker}
+                            <button class="info-button" data-marker="${finding.marker}" title="Learn more about ${finding.marker}">
+                                <i data-lucide="info" class="icon"></i>
+                            </button>
+                        </p>
+                         <p class="text-xs ${confidenceColorClass} mt-1 flex items-center">
+                            <i data-lucide="${confidenceIconName}" class="icon w-3 h-3"></i> Confidence: ${finding.confidence}
+                         </p>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <span class="font-bold text-lg ${riskColorClass} flex items-center mb-2">
+                            <i data-lucide="${riskIconName}" class="icon"></i>
+                            ${finding.risk} Risk
+                        </span>
+                        <button class="text-xs text-blue-400 hover:text-blue-300 details-toggle-button flex items-center" data-target-details="details-${finding.marker}">
+                            Show Details <i data-lucide="chevron-down" class="icon inline-block w-3 h-3 ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-t border-gray-600 border-opacity-50">
+                    <p class="text-sm text-amber-200 flex items-start">
+                        <i data-lucide="clipboard-check" class="icon mt-1 mr-2 flex-shrink-0"></i>
+                        <span><strong class="font-medium">Simulated Suggestion:</strong> ${finding.suggestion || 'N/A'}</span>
+                    </p>
+                </div>
+                <div id="details-${finding.marker}" class="result-details">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                         <div class="md:col-span-1 flex justify-center md:justify-start items-center">
+                              <img src="${finding.imageUrl}" alt="Simulated image for ${finding.disease}" class="shadow-md" onerror="this.onerror=null; this.src='https://placehold.co/100x100/cccccc/ffffff?text=Image+N/A'; this.alt='Placeholder Image';">
+                         </div>
+                         <div class="md:col-span-2 space-y-3">
+                            <div>
+                                <h4 class="detail-header"><i data-lucide="shield-check" class="icon"></i>Simulated Prevention Info:</h4>
+                                <p class="text-gray-300 pl-5">${finding.prevention || 'Information not available.'}</p> </div>
+                            <div>
+                                <h4 class="detail-header"><i data-lucide="syringe" class="icon"></i>Simulated Treatment Info:</h4>
+                                <p class="text-gray-300 pl-5">${finding.treatment || 'Information not available.'}</p> </div>
+                         </div>
+                    </div>
+                </div>
+            `;
+
+            const infoButton = listItem.querySelector('.info-button');
+            if (infoButton) {
+                infoButton.addEventListener('click', (e) => { e.stopPropagation(); openModal(finding.marker) });
+            }
+
+            const toggleButton = listItem.querySelector('.details-toggle-button');
+            const detailsDiv = listItem.querySelector('.result-details');
+            if (toggleButton && detailsDiv) {
+                toggleButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isVisible = detailsDiv.classList.toggle('visible');
+                    toggleButton.innerHTML = isVisible
+                        ? `Hide Details <i data-lucide="chevron-up" class="icon inline-block w-3 h-3 ml-1"></i>`
+                        : `Show Details <i data-lucide="chevron-down" class="icon inline-block w-3 h-3 ml-1"></i>`;
+                    if (window.lucide) { lucide.createIcons({ nodes: [toggleButton] }); }
+                });
+            }
+            return listItem;
+        }
+
+        function showError(message) {
+            errorMessageSpan.textContent = message; // Set text content of the span
+            errorArea.classList.remove('hidden');
+            errorArea.classList.add('fade-in');
+            loadingIndicator.classList.add('hidden');
+            resultsArea.classList.add('hidden'); // Hide results on error
+            // Ensure Lucide icon is rendered for error message
+             if (window.lucide) {
+                 lucide.createIcons({ nodes: [errorArea] });
+             }
+        }
+
+        function clearError() {
+             errorArea.classList.add('hidden');
+             errorMessageSpan.textContent = '';
+        }
+
+        function downloadResults() {
+            if (currentFindings.length === 0 && !reportInput.value.trim()) {
+                showError("No report analyzed or findings to download.");
+                return;
+            }
+            clearError(); // Clear errors before download attempt
+
+            const reportText = reportInput.value;
+            const scoreInfo = calculateOverallScore(currentFindings);
+            let content = `Genomic Risk Predictor Simulation Results\nGenerated: ${new Date().toLocaleString()}\n=========================================\n\nInput Report Text:\n------------------\n${reportText || '(No text pasted/uploaded)'}\n\nAnalysis Summary:\n-----------------\nOverall Simulated Risk Score: ${scoreInfo.score} (${scoreInfo.category})\nNumber of Markers Found: ${currentFindings.length}\n\n`;
+            if (currentFindings.length > 0) {
+                content += `Detected Markers & Details:\n---------------------------\n`;
+                currentFindings.forEach((finding, index) => { content += `\n${index + 1}. Marker: ${finding.marker}\n   Associated Condition: ${finding.disease}\n   Simulated Risk Level: ${finding.risk}\n   Confidence: ${finding.confidence}\n   Description: ${finding.description}\n   Simulated Suggestion: ${finding.suggestion}\n   Simulated Prevention: ${finding.prevention}\n   Simulated Treatment: ${finding.treatment}\n`; });
+            } else { content += `No significant risk markers identified based on the simulation data.\n`; }
+            content += `\n=========================================\nIMPORTANT DISCLAIMER: The information, suggestions, images, and scores provided are for simulation purposes ONLY and are NOT medical advice. Always consult with a qualified healthcare professional for any health concerns or before making any decisions related to your health or treatment. This tool uses predefined mock data and does not involve real AI/ML analysis.\n`;
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `genomic_risk_analysis_${Date.now()}.txt`;
+            document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(link.href);
+        }
+
+        function displayChart(findings) {
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            const labels = findings.map(finding => finding.disease);
+            const data = findings.map(finding => riskPoints[finding.risk]);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Risk Score',
+                        data: data,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Modal Functions ---
+        function openModal(markerKey) {
+            const markerData = diseaseMarkers[markerKey];
+            if (!markerData) return;
+            clearError(); // Clear errors when opening modal
+
+            modalTitle.textContent = `Details for Marker: ${markerKey}`; // Title set here now
+            modalBody.innerHTML = `
+                <p class="flex items-center"><i data-lucide="dna" class="icon mr-2 text-blue-400"></i><strong>Marker:</strong> ${markerKey}</p>
+                <p class="flex items-center"><i data-lucide="stethoscope" class="icon mr-2 text-blue-400"></i><strong>Associated Risk:</strong> ${markerData.disease} (${markerData.risk} Risk)</p>
+                <p class="flex items-center"><i data-lucide="file-text" class="icon mr-2 text-blue-400"></i><strong>Description:</strong> ${markerData.description}</p>
+                <hr class="border-gray-600 my-2">
+                <p class="flex items-start"><i data-lucide="binary" class="icon mr-2 text-gray-400 mt-1"></i><strong>Simulated Technical Details:</strong> ${markerData.details}</p>
+                <p class="mt-4 text-xs text-gray-500 flex items-center"><i data-lucide="alert-circle" class="icon w-3 h-3 mr-1"></i>Note: All information presented is simulated for demonstration purposes.</p>
+            `;
+            // Ensure Lucide icons are rendered inside the modal
+             if (window.lucide) {
+                 lucide.createIcons({ nodes: [modalBody] });
+             }
+            markerModal.classList.remove('hidden');
+            markerModal.classList.add('visible');
+        }
+
+        function closeModal() {
+            markerModal.classList.remove('visible');
+            markerModal.classList.add('hidden');
+        }
+
+        function openFeedbackModal() {
+            feedbackModal.classList.remove('hidden');
+            feedbackModal.classList.add('visible');
+        }
+
+        function closeFeedbackModal() {
+            feedbackModal.classList.remove('visible');
+            feedbackModal.classList.add('hidden');
+        }
+
+        function handleFeedbackSubmit() {
+            const feedbackText = feedbackText.value;
+            if (feedbackText.trim()) {
+                alert('Thank you for your feedback!');
+                closeFeedbackModal();
+            } else {
+                alert('Please provide some feedback.');
+            }
+        }
+
+        function handleLanguageChange() {
+            const selectedLanguage = this.value;
+            alert('Language changed to: ' + selectedLanguage);
+        }
+
+        function toggleDetails() {
+            resultsList.classList.toggle('hidden');
+            this.textContent = this.textContent === 'Show Details' ? 'Hide Details' : 'Show Details';
+        }
+
+        function saveReportToLocalStorage(reportText) {
+            localStorage.setItem('genomicReport', reportText);
+        }
+
+        function loadReportFromLocalStorage() {
+            const savedReport = localStorage.getItem('genomicReport');
+            if (savedReport) {
+                reportInput.value = savedReport;
+            }
+        }
+
+        // Initialize Lucide icons on load
+        function initializeLucide() {
+             try {
+                 if (window.lucide) {
+                     lucide.createIcons();
+                     console.log("Lucide icons initialized.");
+                 } else {
+                     console.warn("Lucide library not found immediately. Will rely on dynamic calls.");
+                 }
+             } catch (error) {
+                 console.error("Error initializing Lucide icons:", error);
+             }
+        }
+
+        // Initial setup on page load
+        document.addEventListener('DOMContentLoaded', () => {
+             initializeLucide();
+             // Add listener to clear error when user starts typing again
+             reportInput.addEventListener('input', clearError);
+             loadReportFromLocalStorage();
+
+             // Add feedback button to the UI
+             const feedbackButton = document.createElement('button');
+             feedbackButton.className = 'bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-5 rounded-lg shadow-sm hover:shadow-md transition duration-300 ease-in-out text-sm';
+             feedbackButton.innerHTML = '<i data-lucide="message-circle" class="icon -ml-1"></i> Provide Feedback';
+             feedbackButton.addEventListener('click', openFeedbackModal);
+             document.querySelector('.bg-gray-800').appendChild(feedbackButton);
+        });
+
+    </script>
+
+</body>
+</html>
