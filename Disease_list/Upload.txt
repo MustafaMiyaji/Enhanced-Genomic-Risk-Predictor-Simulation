@@ -1,0 +1,8 @@
+Detected markers:
+- RS12345: Associated with Type 2 Diabetes.
+- BRCA1_MUT: Associated with Breast/Ovarian Cancer.
+- APOE_E4: Associated with Alzheimer's Disease.
+- HLA_DQ2: Associated with Celiac Disease.
+- GENE_X: Associated with Cardiovascular Disease.
+- MARKER_Z: Associated with Hypothyroidism.
+- VAR_1101: Associated with Macular Degeneration.
